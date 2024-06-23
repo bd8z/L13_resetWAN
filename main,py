@@ -1,0 +1,56 @@
+import configparser
+import json
+import subprocess
+
+import requests
+
+
+def cahnge_profile(host, cookie, idx):
+    hostUrl = "http://" + host
+    headers_ = {
+        "Accept": "application/json, text/javascript, */*; q=0.01",
+        "Accept-Language": "ja,en-US;q=0.9,en;q=0.8",
+        "Connection": "keep-alive",
+        "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+        "Cookie": "stok="+cookie,
+        "DNT": "1",
+        "Origin": hostUrl,
+        "Referer": hostUrl +"/",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+        "X-Requested-With": "XMLHttpRequest"
+    }
+    data_ = {
+        "isTest":"false",
+        "goformId":"APN_PROC_EX",
+        "apn_mode":"manual",
+        "apn_action":"set_default",
+        "set_default_flag":"1",
+        "pdp_type":"IPv4v6",
+        "index":str(idx),
+        "AD":cookie
+    }
+    response = requests.post(url=hostUrl + '/goform/goform_set_cmd_process', headers=headers_, timeout=(3.0, 7.5) ,data=data_)
+    if (response.status_code != 200):
+        raise Exception("netwrok error!")
+
+if __name__ == '__main__':
+    config = configparser.ConfigParser()
+    config.read('config.ini')
+    host = config.get('L13', 'host')
+    cookie = config.get('L13', 'cookie')
+    speedtest_timeout = config.get('L13', 'speedtest_timeout')
+
+    try:
+        stdout_ = subprocess.run(["speedtest-cli", "--json"],capture_output=True, text=True,timeout=60)
+        if (stdout_.returncode == 0):
+            try:
+                json_ = json.loads(stdout_.stdout)
+                if (float(json_["ping"]) > speedtest_timeout):
+                    raise Exception("error")
+            except:
+                raise Exception("error")
+        else:
+            raise Exception("error")
+    except:
+        cahnge_profile(host,cookie, 2)
+        cahnge_profile(host,cookie, 1)
